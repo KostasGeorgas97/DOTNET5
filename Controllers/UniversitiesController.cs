@@ -39,18 +39,29 @@ namespace DOTNET5.Controllers
         public async Task<ActionResult<Universities>> PostUniversities(string country)
         {
         // Fetch the list of universities from the given URL
-        var universities = await GetUniversitiesList(country);
+        var client = new HttpClient();
+        var response = await client.GetAsync($"https://university-domains-list-api.herokuapp.com/v1/domains?country={country}");
+        var data = await response.Content.ReadAsStringAsync();
+
+        try
+        {
+            // Deserialize the JSON data into a list of Universities objects
+        var universities = JsonConvert.DeserializeObject<List<Universities>>(data);
+
+        // Get the existing universities from the database
+         var existingUniversities = _context.Universities.ToList();
+
 
         // Store the data in the database
         foreach (var university in universities)
         {
             
             
-        // Check if the university already exists in the database
-        var existingUniversity = _context.Universities.FirstOrDefault(u =>
-            u.Country == university.Country &&
-            u.UniName == university.UniName &&
-            u.UniWebpage == university.UniWebpage);
+            // Check if the university already exists in the database
+            var existingUniversity = _context.Universities.FirstOrDefault(u =>
+                u.Country == university.Country &&
+                u.UniName == university.UniName &&
+                u.UniWebpage == university.UniWebpage);
 
             if (existingUniversity == null)
             {
@@ -58,11 +69,18 @@ namespace DOTNET5.Controllers
             }
         }
 
-            await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
             // Return the result in JSON format
             return CreatedAtAction("GetUniversities", new { id = universities.First().Id }, universities);
-    }
+        }
+        catch (JsonException ex)
+            {
+                // Log the exception and return an error response
+                Console.WriteLine(ex.Message);
+                return BadRequest();
+            }
+        }
 
 
 
@@ -75,11 +93,18 @@ namespace DOTNET5.Controllers
             {
                 return NotFound();
             }
+            
+            // Apply the search filter on the database query
+            var filteredUniversities = _context.Universities
+                .Where(u => u.UniName.ToLower().Contains(searchTerm.ToLower()))
+                .ToList();
+
+
             // Get all universities from the database
             var universities = _context.Universities.ToList();
 
-            // Filter the universities that contain the search term in their name
-            var filteredUniversities = universities.Where(u => u.UniName.Contains(searchTerm)).ToList();
+            // // Filter the universities that contain the search term in their name
+            // var filteredUniversities = universities.Where(u => u.UniName.Contains(searchTerm)).ToList();
 
             // Return the filtered list as a JSON response
             return Ok(filteredUniversities);
