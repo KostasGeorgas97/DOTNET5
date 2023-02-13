@@ -1,0 +1,23 @@
+version: '3.3'  
+services:
+  db:
+    image: mariadb:latest
+    container_name: mariadb:latest
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: UniversitiesDb
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+    ports:
+      - 3306:3306
+    expose:
+      - 3306
+    volumes:
+      - ./db:/var/lib/mysql
+    networks:
+      - db-network
+volumes:
+mydb:
+  driver: local
+
